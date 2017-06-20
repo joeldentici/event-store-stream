@@ -1,0 +1,18 @@
+{
+  "name": "event-store-stream",
+  "version": "0.0.1",
+  "description": "Provides RxJS Observables for Event Store (geteventstore.com) subscriptions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/joeldentici/event-store-stream.git"
+  },
+  "author": "Joel Dentici",
+  "bugs": {
+    "url": "https://github.com/joeldentici/event-store-stream/issues"
+  },
+  "homepage": "https://github.com/joeldentici/event-store-stream#readme"
+}
