@@ -107,7 +107,7 @@ const methods = {
 	},
 	allFrom$(conn) {
 		/**
-		 *	allFrom$ :: int -> bool -> UserCredentials -> int -> Observable Event
+		 *	allFrom$ :: Position -> bool -> UserCredentials -> int -> Observable Event
 		 *
 		 *	Returns an Observable of all event streams. This stream starts at
 		 *	the desired position, loads all events from there up in batchSize increments,
