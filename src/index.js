@@ -30,3 +30,4 @@ function createStreamConnection(settings, connString) {
 
 module.exports = esClient;
 module.exports.createStreamConnection = createStreamConnection;
+module.exports.Denormalizer = require('./denormalizer.js');
