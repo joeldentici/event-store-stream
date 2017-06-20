@@ -50,12 +50,12 @@ function createStream(cb) {
 
 
 const methods = {
+	/**
+	 *	stream$ :: StreamConnection -> string -> bool -> UserCredentials -> Observable Event
+	 *
+	 *	Returns an Observable of the requested event stream.
+	 */
 	stream$(conn) {
-		/**
-		 *	stream$ :: string -> bool -> UserCredentials -> Observable Event
-		 *
-		 *	Returns an Observable of the requested event stream.
-		 */
 		return function(stream, resolveLinkTos, userCredentials) {
 			return createStream(function(observer) {
 				return conn.subscribeToStream(
@@ -67,34 +67,41 @@ const methods = {
 			});
 		}
 	},
+	/**
+	 *	streamFrom$ :: StreamConnection -> string -> int -> bool -> UserCredentials -> int -> bool -> Observable Event
+	 *
+	 *	Returns an Observable of the requested event stream. This stream starts at
+	 *	the desired position, loads all events from there up in batchSize increments,
+	 *	and then finally subscribes to the live stream once all old events are processed.
+	 *
+	 *	If the final parameter is true, then the resulting Observable will complete after catching up
+	 *	to the latest event. This can be used with an initial aggregate and reduce to apply events to an
+	 *	aggregate.
+	 *
+	 *	If the final parameter is false, then the subscription is kept open and the Observable will receive
+	 *	live events.
+	 */
 	streamFrom$(conn) {
-		/**
-		 *	streamFrom$ :: string -> int -> bool -> UserCredentials -> int -> Observable Event
-		 *
-		 *	Returns an Observable of the requested event stream. This stream starts at
-		 *	the desired position, loads all events from there up in batchSize increments,
-		 *	and then finally subscribes to the live stream once all old events are processed.
-		 */
-		return function(stream, lastCheckPoint, resolveLinkTos, userCredentials, batchSize) {
+		return function(stream, lastCheckPoint, resolveLinkTos, userCredentials, batchSize, endAfterCatchUp = false) {
 			return createStream(function(observer) {
 				return Promise.resolve(conn.subscribeToStreamFrom(
 					stream,
 					lastCheckPoint,
 					resolveLinkTos,
 					(s,e) => observer.onNext(e),
-					x => x,
+					endAfterCatchUp ? observer.onCompleted.bind(observer) : x => x,
 					observer.onCompleted.bind(observer),
 					userCredentials,
 					batchSize));
 			});
 		}
 	},
+	/**
+	 *	all$ :: StreamConnection -> bool -> UserCredentials -> Observable Event
+	 *
+	 *	Returns an Observable of all event streams.
+	 */
 	all$(conn) {
-		/**
-		 *	all$ :: bool -> UserCredentials -> Observable Event
-		 *
-		 *	Returns an Observable of all event streams.
-		 */
 		return function(resolveLinkTos, userCredentials) {
 			return createStream(function(observer) {
 				return conn.subscribeToAll(
@@ -105,21 +112,28 @@ const methods = {
 			});
 		}
 	},
+	/**
+	 *	allFrom$ :: StreamConnection -> Position -> bool -> UserCredentials -> int -> bool -> Observable Event
+	 *
+	 *	Returns an Observable of all event streams. This stream starts at
+	 *	the desired position, loads all events from there up in batchSize increments,
+	 *	and then finally subscribes to the live stream once all old events are processed.
+	 *
+	 *	If the final parameter is true, then the resulting Observable will complete after catching up
+	 *	to the latest event. This can be used with an initial aggregate and reduce to apply events to an
+	 *	aggregate.
+	 *
+	 *	If the final parameter is false, then the subscription is kept open and the Observable will receive
+	 *	live events.
+	 */
 	allFrom$(conn) {
-		/**
-		 *	allFrom$ :: Position -> bool -> UserCredentials -> int -> Observable Event
-		 *
-		 *	Returns an Observable of all event streams. This stream starts at
-		 *	the desired position, loads all events from there up in batchSize increments,
-		 *	and then finally subscribes to the live stream once all old events are processed.
-		 */
-		return function(lastCheckPoint, resolveLinkTos, userCredentials, batchSize) {
+		return function(lastCheckPoint, resolveLinkTos, userCredentials, batchSize, endAfterCatchUp = false) {
 			return createStream(function(observer) {
 				return Promise.resolve(conn.subscribeToAllFrom(
 					lastCheckPoint,
 					resolveLinkTos,
 					(s,e) => observer.onNext(e),
-					x => x,
+					endAfterCatchUp ? observer.onCompleted.bind(observer) : x => x,
 					observer.onCompleted.bind(observer),
 					userCredentials,
 					batchSize));
