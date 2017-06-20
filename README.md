@@ -20,7 +20,7 @@ const connSettings = {};  // Use defaults
 const connection = client.createStreamConnection(connSettings, "tcp://localhost:1113");
 connection.connect();
 connection.once('connected', function (tcpEndPoint) {
-	const stream$ = connection.stream$(streamName, false, credentials, 1);
+	const stream$ = connection.stream$(streamName, false, credentials);
 	stream$
 		.forEach(x => console.log(x));
 });

@@ -15,9 +15,9 @@ const connSettings = {};  // Use defaults
 const connection = client.createStreamConnection(connSettings, "tcp://localhost:1113");
 connection.connect();
 connection.once('connected', function (tcpEndPoint) {
-	const stream$ = connection.stream$(streamName, false, credentials, 1);
+	const stream$ = connection.stream$(streamName, false, credentials);
 	const streamFrom$ = connection.streamFrom$(streamName, 0, false, credentials, 1, true);
-	const all$ = connection.all$(false, credentials, 1);
+	const all$ = connection.all$(false, credentials);
 	const allFrom$ = connection.allFrom$(null, false, credentials, 1, true);
 
 	print(allFrom$);
