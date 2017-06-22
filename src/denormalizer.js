@@ -1,5 +1,10 @@
-const {Transaction: T} = require('transactional');
+const {Transaction: T} = require('transactional-db');
 const {doM} = require('monadic-js').Utility;
+const Rx = require('rx');
+const esClient = require('node-eventstore-client');
+
+const Long = require('long');
+
 
 /**
  *	event-store-stream.Denormalizer
@@ -57,16 +62,34 @@ class Denormalizer {
 	 */
 	start() {
 		const eventTypes = Object.keys(this.mappers);
+		console.log(eventTypes);
 		const self = this;
 		doM(function*() {
-			const checkpoint = yield self.dbm.runTransaction(T.query(`
-				SELECT checkpoint from history`));
+			//read checkpoint position from the database (this represents
+			//the last event we processed)
+			const [{low_commit, high_commit, low_prepare, high_prepare}] =
+			 yield self.dbm.runTransaction(T.query(`
+				SELECT low_commit,high_commit,low_prepare,high_prepare from history`));
 
-			const events$ = es
-				.allFrom$(checkpoint, false, es.credentials, self.batchSize)
+			//turn the position read from database into an esClient Position
+			let position;
+			if (low_commit === 0 && high_commit === 0 && low_prepare === 0
+				&& high_prepare === 0)
+				position = null;
+			else
+				position = new esClient.Position(
+					new Long(low_commit, high_commit),
+					new Long(low_prepare, high_prepare));
+
+			//load the $all event stream from the position
+			//we just loaded
+			const events$ = self.es
+				.allFrom$(position, false, self.es.credentials, self.batchSize)
 				.filter(interested(eventTypes))
-				.buffer(Rx.Observable.interval(self.throttle));
+				.buffer(Rx.Observable.interval(self.throttle))
+				.filter(x => x.length); //ignore empty windows
 
+			//run the denormalizer on the event stream
 			self.run(events$);
 		});
 	}
@@ -83,12 +106,28 @@ class Denormalizer {
 			const self = this;
 			this.dbm.runTransaction(doM(function*() {
 				for (let event of events) {
-					yield T.continue(self.mappers[event]);
+					//map each event to a query and execute it
+					yield T.continue(self.mappers[event.eventType](event));
 				}
 
-				const lastEvent = events[events.length - 1];
+				//the events come to us in order of first to last, so
+				//get the position from the last event we processed
+				const position = events[events.length - 1].position;
 
-				return T.query(`UPDATE history SET checkpoint = ?`, lastEvent.eventId);
+				//extract the 32 bit fields from the position
+				const low_commit = position.commitPosition.getLowBits();
+				const high_commit = position.commitPosition.getHighBits();
+				const low_prepare = position.preparePosition.getLowBits();
+				const high_prepare = position.preparePosition.getHighBits();
+
+				//store the 32 bit fields of the position to the database
+				return T.query(`UPDATE history SET 
+					low_commit = ?, high_commit = ?,
+					low_prepare = ?, high_prepare = ?`,
+					low_commit,
+					high_commit,
+					low_prepare,
+					high_prepare);
 			}), this.bus);
 		});
 	}

@@ -38,11 +38,14 @@ function createStream(cb) {
 	.map(event => {
 		if (event.originalEvent.isJson) {
 			return Object.assign({}, event.originalEvent, {
-				data: JSON.parse(event.originalEvent.data.toString())
+				data: JSON.parse(event.originalEvent.data.toString()),
+				position: event.originalPosition,
 			});
 		}
 		else {
-			return event.originalEvent;
+			return Object.assign({}, event.originalEvent, {
+				position: event.originalPosition
+			});
 		}
 	});
 

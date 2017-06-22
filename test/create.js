@@ -21,10 +21,10 @@ esConnection.once('connected', function (tcpEndPoint) {
 
 var eventId = uuid.v4();
 var eventData = {
-    a : Math.random(), 
-    b: uuid.v4()
+  FileID: '2015-001-00000-hlnet',
+  newDepartment: 'Outbound Mail',
 };
-var event = esClient.createJsonEventData(eventId, eventData, null, 'testEvent');
+var event = esClient.createJsonEventData(eventId, eventData, null, 'FileMoved');
 console.log("Appending...");
 esConnection.appendToStream(streamName, esClient.expectedVersion.any, event)
     .then(function(result) {
