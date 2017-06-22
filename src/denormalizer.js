@@ -62,7 +62,6 @@ class Denormalizer {
 	 */
 	start() {
 		const eventTypes = Object.keys(this.mappers);
-		console.log(eventTypes);
 		const self = this;
 		doM(function*() {
 			//read checkpoint position from the database (this represents
