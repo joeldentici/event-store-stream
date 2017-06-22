@@ -1,7 +1,7 @@
 const Rx = require('rx');
 
 /**
- *	StreamConnection
+ *	event-store-stream.StreamConnection
  *	written by Joel Dentici
  *	on 6/19/2017
  *

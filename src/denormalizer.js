@@ -1,5 +1,8 @@
+const {Transaction: T} = require('transactional');
+const {doM} = require('monadic-js').Utility;
+
 /**
- *	Denormalizer
+ *	event-store-stream.Denormalizer
  *	written by Joel Dentici
  *	on 6/20/2017
  *
@@ -7,29 +10,38 @@
  *	queries and loading event store events, so the
  *	user code only needs to worry about mapping from
  *	events to queries.
+ *
+ *	To use the denormalizer, you must ensure that your schema
+ *	includes a table called "history" with a single column called
+ *	"checkpoint" of type int. This is used to pick the first event
+ *	to retrieve from the event store on a cold start, and it is updated
+ *	every time a batch of events is processed, transactionally with
+ *	the updates.
  */
 class Denormalizer {
 	/**
-	 *	new :: DatabaseManager -> StreamConnection -> int -> int
+	 *	new :: DBHManager -> StreamConnection -> int -> int -> IBus -> Denormalizer
 	 *
 	 *	Creates a new denormalizer. Queries are ran on dbm, events
-	 *	are loaded from es.
+	 *	are loaded from es. If an optional event bus is supplied, then
+	 *	events emitted by mappers will be published to it.
 	 *
 	 *	Events are loaded batchSize events at a time.
 	 *
 	 *	Events are buffered by the provided throttle time (milliseconds)
 	 *	and processed together in the window they occur in.
 	 */
-	constructor(dbm, es, batchSize, throttle) {
+	constructor(dbm, es, batchSize, throttle, eventBus = {publish: (_,__) => null}) {
 		this.dbm = dbm;
 		this.es = es;
+		this.bus = eventBus;
 		this.batchSize = batchSize;
 		this.throttle = throttle;
 		this.mappers = {};
 	}
 
 	/**
-	 *	map :: string -> (Event -> Transactional ())
+	 *	map :: Denormalizer -> string -> (Event -> Transaction ())
 	 *
 	 *	Register a function that maps events of a specific type
 	 *	to queries on the database.
@@ -39,7 +51,7 @@ class Denormalizer {
 	}
 
 	/**
-	 *	start :: () -> ()
+	 *	start :: Denormalizer -> () -> ()
 	 *
 	 *	Start the denormalizer.
 	 */
@@ -60,7 +72,7 @@ class Denormalizer {
 	}
 
 	/**
-	 *	run :: Observable Event -> ()
+	 *	run :: Denormalizer -> Observable Event -> ()
 	 *
 	 *	Processes events through the mappers and then
 	 *	runs a transaction for each batch of events on
@@ -71,13 +83,13 @@ class Denormalizer {
 			const self = this;
 			this.dbm.runTransaction(doM(function*() {
 				for (let event of events) {
-					yield self.mappers(event);
+					yield T.continue(self.mappers[event]);
 				}
 
 				const lastEvent = events[events.length - 1];
 
 				return T.query(`UPDATE history SET checkpoint = ?`, lastEvent.eventId);
-			}));
+			}), this.bus);
 		});
 	}
 }
