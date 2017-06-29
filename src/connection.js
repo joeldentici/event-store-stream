@@ -1,4 +1,5 @@
 const Rx = require('rx');
+const {simplifyEvent} = require('./util.js');
 
 /**
  *	event-store-stream.StreamConnection
@@ -32,23 +33,10 @@ function createStream(cb) {
 			res.then(sub => sub.stop());
 		}
 	})
-	.share()
 	//automatically parse the JSON data (if it is JSON)
 	//and only return the originalEvent
-	.map(event => {
-		if (event.originalEvent.isJson) {
-			return Object.assign({}, event.originalEvent, {
-				data: JSON.parse(event.originalEvent.data.toString()),
-				position: event.originalPosition,
-			});
-		}
-		else {
-			return Object.assign({}, event.originalEvent, {
-				position: event.originalPosition
-			});
-		}
-	});
-
+	.map(simplifyEvent)
+	.share();
 }
 
 

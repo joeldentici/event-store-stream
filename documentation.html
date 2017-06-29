@@ -233,6 +233,201 @@
 			</ul>
 		</div>
 	
+		<div class="module-header">
+			<div class="module-name">
+			Module: <a href="#doc.module.event-store-stream.util">event-store-stream.util</a>
+			</div>
+			<ul class="module-functions">
+				
+			<li>
+				<a href="#doc.module.event-store-stream.util.func.simplifyEvent">
+					<b>simplifyEvent</b>
+				</a> <b>::</b> ResolvedEvent &#8594; Event
+			</li>
+		
+			</ul>
+		</div>
+	
+		<div class="module-header">
+			<div class="module-name">
+			Module: <a href="#doc.module.new :: UUID -> int -> Object -> DomainObject">new :: UUID -> int -> Object -> DomainObject</a>
+			</div>
+			<ul class="module-functions">
+				
+			<li>
+				<a href="#doc.module.new :: UUID -> int -> Object -> DomainObject.func.create">
+					<b>create</b>
+				</a> <b>::</b> ...any &#8594; EventStoreDSL Error DomainObject
+			</li>
+		
+			<li>
+				<a href="#doc.module.new :: UUID -> int -> Object -> DomainObject.func.load">
+					<b>load</b>
+				</a> <b>::</b> UUID &#8594; EventStoreDSL Error DomainObject
+			</li>
+		
+			<li>
+				<a href="#doc.module.new :: UUID -> int -> Object -> DomainObject.func.addEvent">
+					<b>addEvent</b>
+				</a> <b>::</b> DomainObject &#8594; Event &#8594; bool &#8594; EventStoreDSL Error DomainObject
+			</li>
+		
+			<li>
+				<a href="#doc.module.new :: UUID -> int -> Object -> DomainObject.func._applyEvent">
+					<b>_applyEvent</b>
+				</a> <b>::</b> DomainObject &#8594; DomainEvent &#8594; int &#8594; DomainObject
+			</li>
+		
+			<li>
+				<a href="#doc.module.new :: UUID -> int -> Object -> DomainObject.func.applyEvent">
+					<b>applyEvent</b>
+				</a> <b>::</b> DomainObject &#8594; DomainEvent &#8594; Object
+			</li>
+		
+			<li>
+				<a href="#doc.module.new :: UUID -> int -> Object -> DomainObject.func.snapshot">
+					<b>snapshot</b>
+				</a> <b>::</b> DomainObject &#8594; () &#8594; EventStoreDSL Error DomainObject
+			</li>
+		
+			</ul>
+		</div>
+	
+		<div class="module-header">
+			<div class="module-name">
+			Module: <a href="#doc.module.event-store-stream.Domain.Event">event-store-stream.Domain.Event</a>
+			</div>
+			<ul class="module-functions">
+				
+			</ul>
+		</div>
+	
+		<div class="module-header">
+			<div class="module-name">
+			Module: <a href="#doc.module.event-store-stream.EventStoreESL">event-store-stream.EventStoreESL</a>
+			</div>
+			<ul class="module-functions">
+				
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.func.readFromStream">
+					<b>readFromStream</b>
+				</a> <b>::</b> string &#8594; int &#8594; EventStoreESL (StreamDeletedError | AccessDeniedError) (Observable Event ())
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.func.appendToStream">
+					<b>appendToStream</b>
+				</a> <b>::</b> string &#8594; [EventData] | EventData &#8594; int &#8594; EventStoreESL EventStoreError ()
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.func.commitStream">
+					<b>commitStream</b>
+				</a> <b>::</b> string &#8594; EventStoreESL EventStoreError ()
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.func.readEvents">
+					<b>readEvents</b>
+				</a> <b>::</b> string &#8594; int &#8594; int &#8594; 'forward' | 'backward' &#8594; EventStoreESL EventStoreError [Event]
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.func.readEvent">
+					<b>readEvent</b>
+				</a> <b>::</b> string &#8594; int &#8594; EventStoreESL EventStoreError Event
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.func.unit">
+					<b>unit</b>
+				</a> <b>::</b> a &#8594; EventESL () a
+			</li>
+		
+			</ul>
+		</div>
+	
+		<div class="module-header">
+			<div class="module-name">
+			Module: <a href="#doc.module.event-store-stream.EventStoreESL.Interpreter">event-store-stream.EventStoreESL.Interpreter</a>
+			</div>
+			<ul class="module-functions">
+				
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.Interpreter.func.new">
+					<b>new</b>
+				</a> <b>::</b> StreamConnection &#8594; UserCredentials &#8594; int &#8594; (Free f a &#8594; Async a) &#8594; Interpreter
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.Interpreter.func.prepare">
+					<b>prepare</b>
+				</a> <b>::</b> Interpreter &#8594; () &#8594; Async () ()
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.Interpreter.func.map">
+					<b>map</b>
+				</a> <b>::</b> Interpeter &#8594; EventStoreESL e a &#8594; (Async e a, (a &#8594; Free f b) | Free f b)
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.Interpreter.func.cleanup">
+					<b>cleanup</b>
+				</a> <b>::</b> Interpreter &#8594; a &#8594; Async e a
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.Interpreter.func.">
+					<b></b>
+				</a> <b>::</b> leanupErr : Interpreter &#8594; e &#8594; Async e ()
+			</li>
+		
+			<li>
+				<a href="#doc.module.event-store-stream.EventStoreESL.Interpreter.func.interpreter">
+					<b>interpreter</b>
+				</a> <b>::</b> StreamConnection &#8594; UserCredentials &#8594; int &#8594; (Free f a &#8594; Async a) &#8594; Interpreter
+			</li>
+		
+			</ul>
+		</div>
+	
+		<div class="module-header">
+			<div class="module-name">
+			Module: <a href="#doc.module.event-store-stream.EventStoreESL.Functor.AppendToStream">event-store-stream.EventStoreESL.Functor.AppendToStream</a>
+			</div>
+			<ul class="module-functions">
+				
+			</ul>
+		</div>
+	
+		<div class="module-header">
+			<div class="module-name">
+			Module: <a href="#doc.module.event-store-stream.EventStoreESL.Functor.CommitStream">event-store-stream.EventStoreESL.Functor.CommitStream</a>
+			</div>
+			<ul class="module-functions">
+				
+			</ul>
+		</div>
+	
+		<div class="module-header">
+			<div class="module-name">
+			Module: <a href="#doc.module.event-store-stream.EventStoreESL.Functor.ReadEvents">event-store-stream.EventStoreESL.Functor.ReadEvents</a>
+			</div>
+			<ul class="module-functions">
+				
+			</ul>
+		</div>
+	
+		<div class="module-header">
+			<div class="module-name">
+			Module: <a href="#doc.module.event-store-stream.EventStoreESL.Functor.ReadFromStream">event-store-stream.EventStoreESL.Functor.ReadFromStream</a>
+			</div>
+			<ul class="module-functions">
+				
+			</ul>
+		</div>
+	
 			</div>
 			<div class="project-description">
 			<h2>Module Description</h2>
@@ -445,6 +640,406 @@ RxJS Observable streams of subscriptions.
 			</div>
 		</div>
 	
+		<div class="module-description" id="doc.module.event-store-stream.util">
+			<div class="module-name">
+				Module: event-store-stream.util
+			</div>
+			<div class="module-author">
+			<b>Written By:</b> Joel Dentici
+			</div>
+			<div class="module-date">
+			<b>Written On:</b> 6/29/2017
+			</div>
+			<div class="module-desc">
+			Utility functions used internally.
+			</div>
+			<div class="module-functions">
+				
+			<div class="function-description"
+			id="doc.module.event-store-stream.util.func.simplifyEvent">
+				<div class="function-name">
+					<b>simplifyEvent</b> <b>::</b> ResolvedEvent &#8594; Event
+				</div>
+				<div class="function-desc">
+					
+Simplifies the event object from the one returned
+by the Event Store.
+				</div>
+			</div>
+		
+			</div>
+		</div>
+	
+		<div class="module-description" id="doc.module.new :: UUID -> int -> Object -> DomainObject">
+			<div class="module-name">
+				Module: new :: UUID -> int -> Object -> DomainObject
+			</div>
+			<div class="module-author">
+			<b>Written By:</b> 
+			</div>
+			<div class="module-date">
+			<b>Written On:</b> 
+			</div>
+			<div class="module-desc">
+			
+			</div>
+			<div class="module-functions">
+				
+			<div class="function-description"
+			id="doc.module.new :: UUID -> int -> Object -> DomainObject.func.create">
+				<div class="function-name">
+					<b>create</b> <b>::</b> ...any &#8594; EventStoreDSL Error DomainObject
+				</div>
+				<div class="function-desc">
+					
+Creates a new instance of the domain object.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.new :: UUID -> int -> Object -> DomainObject.func.load">
+				<div class="function-name">
+					<b>load</b> <b>::</b> UUID &#8594; EventStoreDSL Error DomainObject
+				</div>
+				<div class="function-desc">
+					
+Loads the domain object with the specified id.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.new :: UUID -> int -> Object -> DomainObject.func.addEvent">
+				<div class="function-name">
+					<b>addEvent</b> <b>::</b> DomainObject &#8594; Event &#8594; bool &#8594; EventStoreDSL Error DomainObject
+				</div>
+				<div class="function-desc">
+					
+Adds an event to the domain object.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.new :: UUID -> int -> Object -> DomainObject.func._applyEvent">
+				<div class="function-name">
+					<b>_applyEvent</b> <b>::</b> DomainObject &#8594; DomainEvent &#8594; int &#8594; DomainObject
+				</div>
+				<div class="function-desc">
+					
+Returns a new instance of this type representing the same domain
+object in the state arrived at by applying the provided event.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.new :: UUID -> int -> Object -> DomainObject.func.applyEvent">
+				<div class="function-name">
+					<b>applyEvent</b> <b>::</b> DomainObject &#8594; DomainEvent &#8594; Object
+				</div>
+				<div class="function-desc">
+					
+Returns changes to apply to this object in response to
+an event.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.new :: UUID -> int -> Object -> DomainObject.func.snapshot">
+				<div class="function-name">
+					<b>snapshot</b> <b>::</b> DomainObject &#8594; () &#8594; EventStoreDSL Error DomainObject
+				</div>
+				<div class="function-desc">
+					
+Takes a snapshot of the current domain object state.
+				</div>
+			</div>
+		
+			</div>
+		</div>
+	
+		<div class="module-description" id="doc.module.event-store-stream.Domain.Event">
+			<div class="module-name">
+				Module: event-store-stream.Domain.Event
+			</div>
+			<div class="module-author">
+			<b>Written By:</b> Joel Dentici
+			</div>
+			<div class="module-date">
+			<b>Written On:</b> 6/29/2017
+			</div>
+			<div class="module-desc">
+			Base type for Events.
+			</div>
+			<div class="module-functions">
+				
+			</div>
+		</div>
+	
+		<div class="module-description" id="doc.module.event-store-stream.EventStoreESL">
+			<div class="module-name">
+				Module: event-store-stream.EventStoreESL
+			</div>
+			<div class="module-author">
+			<b>Written By:</b> Joel Dentici
+			</div>
+			<div class="module-date">
+			<b>Written On:</b> 6/29/2017
+			</div>
+			<div class="module-desc">
+			The ESL (Effect Specific Language) for Event
+Store allows the creation of composable transactions
+on the Event Store.<br><br>An ESL expression automatically handles the creation
+of a transaction whenever a stream is first written to and attempts
+to commit all open transactions after it finishes running.<br><br>Interpreter behavior:
+	When a stream has no transaction open:
+		If we read from the stream, the expected version becomes
+		the last eventNumber read<br><br>		If we write to a stream, a transaction is opened and the
+		stored last eventNumber from reading is used as the expectedVersion<br><br>		If we write to a stream, we can also provide an expectedVersion
+		number for the transaction.<br><br>	When a stream has a transaction open:
+		Attempting to read from the stream will commit the current transaction.
+		See above for how the next transaction is affected<br><br>		Writing will simply write to the underlying transaction. Specifying an
+		expected verion will commit the current transaction, then create a new
+		one as above
+			</div>
+			<div class="module-functions">
+				
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.func.readFromStream">
+				<div class="function-name">
+					<b>readFromStream</b> <b>::</b> string &#8594; int &#8594; EventStoreESL (StreamDeletedError | AccessDeniedError) (Observable Event ())
+				</div>
+				<div class="function-desc">
+					
+Gets an Observable sequence of events from the specified stream,
+starting at the specified event number in the stream.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.func.appendToStream">
+				<div class="function-name">
+					<b>appendToStream</b> <b>::</b> string &#8594; [EventData] | EventData &#8594; int &#8594; EventStoreESL EventStoreError ()
+				</div>
+				<div class="function-desc">
+					
+Appends an event (or events) to a stream. This will always take place within
+an EventStore transaction.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.func.commitStream">
+				<div class="function-name">
+					<b>commitStream</b> <b>::</b> string &#8594; EventStoreESL EventStoreError ()
+				</div>
+				<div class="function-desc">
+					
+Commits the transaction for the specified stream.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.func.readEvents">
+				<div class="function-name">
+					<b>readEvents</b> <b>::</b> string &#8594; int &#8594; int &#8594; 'forward' | 'backward' &#8594; EventStoreESL EventStoreError [Event]
+				</div>
+				<div class="function-desc">
+					
+Reads events from the event stream in the specified direction.<br><br>If reading backwards, then negative starting values can be used, where
+-1 is the last event, -2 is the second to last event, and so on.<br><br>Direction is forward if not specified.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.func.readEvent">
+				<div class="function-name">
+					<b>readEvent</b> <b>::</b> string &#8594; int &#8594; EventStoreESL EventStoreError Event
+				</div>
+				<div class="function-desc">
+					
+Reads a single event from the event stream. Use negative position to
+read from end of stream, where -1 is the last event, -2 is the second to last,
+and so on.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.func.unit">
+				<div class="function-name">
+					<b>unit</b> <b>::</b> a &#8594; EventESL () a
+				</div>
+				<div class="function-desc">
+					
+Put a value into the ESL context.
+				</div>
+			</div>
+		
+			</div>
+		</div>
+	
+		<div class="module-description" id="doc.module.event-store-stream.EventStoreESL.Interpreter">
+			<div class="module-name">
+				Module: event-store-stream.EventStoreESL.Interpreter
+			</div>
+			<div class="module-author">
+			<b>Written By:</b> Joel Dentici
+			</div>
+			<div class="module-date">
+			<b>Written On:</b> 6/29/2017
+			</div>
+			<div class="module-desc">
+			This interpreter maps the EventStoreESL expression to
+an Async computation.
+			</div>
+			<div class="module-functions">
+				
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.Interpreter.func.new">
+				<div class="function-name">
+					<b>new</b> <b>::</b> StreamConnection &#8594; UserCredentials &#8594; int &#8594; (Free f a &#8594; Async a) &#8594; Interpreter
+				</div>
+				<div class="function-desc">
+					
+Constructs a new instance of the interpreter.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.Interpreter.func.prepare">
+				<div class="function-name">
+					<b>prepare</b> <b>::</b> Interpreter &#8594; () &#8594; Async () ()
+				</div>
+				<div class="function-desc">
+					
+Prepares the interpreter's state to interpret
+an EventStoreESL expression.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.Interpreter.func.map">
+				<div class="function-name">
+					<b>map</b> <b>::</b> Interpeter &#8594; EventStoreESL e a &#8594; (Async e a, (a &#8594; Free f b) | Free f b)
+				</div>
+				<div class="function-desc">
+					
+Maps the provided expression to an Async computation.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.Interpreter.func.cleanup">
+				<div class="function-name">
+					<b>cleanup</b> <b>::</b> Interpreter &#8594; a &#8594; Async e a
+				</div>
+				<div class="function-desc">
+					
+Cleans up the resources used by the interpreter.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.Interpreter.func.">
+				<div class="function-name">
+					<b></b> <b>::</b> leanupErr : Interpreter &#8594; e &#8594; Async e ()
+				</div>
+				<div class="function-desc">
+					
+Cleans up the resources used by the interpreter,
+when an error during interpretation occurs.
+				</div>
+			</div>
+		
+			<div class="function-description"
+			id="doc.module.event-store-stream.EventStoreESL.Interpreter.func.interpreter">
+				<div class="function-name">
+					<b>interpreter</b> <b>::</b> StreamConnection &#8594; UserCredentials &#8594; int &#8594; (Free f a &#8594; Async a) &#8594; Interpreter
+				</div>
+				<div class="function-desc">
+					
+Creates an interpreter constructor for the specified
+stream connection.
+				</div>
+			</div>
+		
+			</div>
+		</div>
+	
+		<div class="module-description" id="doc.module.event-store-stream.EventStoreESL.Functor.AppendToStream">
+			<div class="module-name">
+				Module: event-store-stream.EventStoreESL.Functor.AppendToStream
+			</div>
+			<div class="module-author">
+			<b>Written By:</b> Joel Dentici
+			</div>
+			<div class="module-date">
+			<b>Written On:</b> 6/29/2017
+			</div>
+			<div class="module-desc">
+			Represents a request to append to a stream in the
+event store.
+			</div>
+			<div class="module-functions">
+				
+			</div>
+		</div>
+	
+		<div class="module-description" id="doc.module.event-store-stream.EventStoreESL.Functor.CommitStream">
+			<div class="module-name">
+				Module: event-store-stream.EventStoreESL.Functor.CommitStream
+			</div>
+			<div class="module-author">
+			<b>Written By:</b> Joel Dentici
+			</div>
+			<div class="module-date">
+			<b>Written On:</b> 6/29/2017
+			</div>
+			<div class="module-desc">
+			Represents a request to commit writes to a stream in the
+event store.
+			</div>
+			<div class="module-functions">
+				
+			</div>
+		</div>
+	
+		<div class="module-description" id="doc.module.event-store-stream.EventStoreESL.Functor.ReadEvents">
+			<div class="module-name">
+				Module: event-store-stream.EventStoreESL.Functor.ReadEvents
+			</div>
+			<div class="module-author">
+			<b>Written By:</b> Joel Dentici
+			</div>
+			<div class="module-date">
+			<b>Written On:</b> 6/29/2017
+			</div>
+			<div class="module-desc">
+			Represents a request to read from a stream in the
+event store.
+			</div>
+			<div class="module-functions">
+				
+			</div>
+		</div>
+	
+		<div class="module-description" id="doc.module.event-store-stream.EventStoreESL.Functor.ReadFromStream">
+			<div class="module-name">
+				Module: event-store-stream.EventStoreESL.Functor.ReadFromStream
+			</div>
+			<div class="module-author">
+			<b>Written By:</b> Joel Dentici
+			</div>
+			<div class="module-date">
+			<b>Written On:</b> 6/29/2017
+			</div>
+			<div class="module-desc">
+			Represents a request to read from a stream in the
+event store.
+			</div>
+			<div class="module-functions">
+				
+			</div>
+		</div>
+	
 			</div>
 
 			<div class="top-scroll">
@@ -452,7 +1047,7 @@ RxJS Observable streams of subscriptions.
 			</div>
 
 			<div class="footer">
-			This documentation was generated by <code>hmdoc</code> on <code>6/21/2017, 4:38:21 PM</code>
+			This documentation was generated by <code>hmdoc</code> on <code>6/29/2017, 10:09:23 PM</code>
 			</div>
 		</body>
 	</html>
