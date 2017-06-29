@@ -26,27 +26,9 @@ class DomainObject {
 	 *	Creates a new instance of the domain object.
 	 */
 	static create(...args) {
-		const self = this;
+		const obj = new this(uuid.v4(), -1, {});
 
-		//give our stream an id related to whatever type of
-		//domain object this is
-		const typeName = this.prototype.constructor.name;
-		const objId = uuid.v4();
-		const streamId = typeName + '-' + objId;
-
-		//create the creation event
-		const event = toStorableEvent(
-			typeName, 
-			this.doCreate(...args)
-		);
-
-		//create and store the object and return it
-		return doM(function*() {
-			//create event stream & add creation event for object
-			yield E.appendToStream(streamId, event);
-
-			return self.load(objId);
-		});
+		return obj.addEvent(this.doCreate(...args));
 	}
 
 	/**
@@ -54,7 +36,7 @@ class DomainObject {
 	 *
 	 *	Loads the domain object with the specified id.
 	 */
-	static load(id) {
+	static load(id, loadVersion = Infinity) {
 		const self = this;
 
 		//our streams 
@@ -62,7 +44,7 @@ class DomainObject {
 		const streamId = typeName + '-' + id;
 		const snapshotStreamId = 'snapshot-' + streamId;
 
-		let initialState = new this(id, 0, {});
+		let initialState = new this(id, -1, {});
 		let startPosition = null;
 		return doM(function*() {
 			//if there is a snapshot, then change starting position
@@ -72,7 +54,8 @@ class DomainObject {
 			}
 
 			//get events from the object's event stream
-			const events$ = yield E.readFromStream(streamId, startPosition);
+			const events$ = (yield E.readFromStream(streamId, startPosition))
+				.filter(event => event.eventNumber < loadVersion);
 
 			//reconstitute the object state from the events
 			const loadObj = Async.await(
@@ -120,7 +103,7 @@ class DomainObject {
 
 		//we will apply domainEvent with eventNumber to our self
 		const domainEvent = new DomainEvent(event.constructor.name, event);
-		const eventNumber = this.version + 1;
+		const newVersion = this.version + 1;
 
 		const self = this;
 
@@ -135,7 +118,7 @@ class DomainObject {
 				);
 			}
 
-			return E.unit(self._applyEvent(domainEvent, eventNumber));
+			return E.unit(self._applyEvent(domainEvent, newVersion));
 		});
 	}
 
@@ -145,12 +128,12 @@ class DomainObject {
 	 *	Returns a new instance of this type representing the same domain
 	 *	object in the state arrived at by applying the provided event.
 	 */
-	_applyEvent(event, eventNumber) {
+	_applyEvent(event, version) {
 		const changes = this.applyEvent(event);
 
 		const options = Object.assign({}, this, changes);
 
-		return new this.constructor(this.id, eventNumber, options);
+		return new this.constructor(this.id, version, options);
 	}
 
 	/**

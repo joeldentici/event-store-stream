@@ -33,4 +33,3 @@ module.exports.createStreamConnection = createStreamConnection;
 module.exports.Denormalizer = require('./denormalizer.js');
 module.exports.EventStoreESL = require('./esl');
 module.exports.DomainObject = require('./domain/domainobject.js');
-module.exports.Event = require('./domain/event.js');
