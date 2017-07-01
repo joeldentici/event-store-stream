@@ -106,7 +106,7 @@ class Denormalizer {
 			this.dbm.runTransaction(doM(function*() {
 				for (let event of events) {
 					//map each event to a query and execute it
-					yield T.continue(self.mappers[event.eventType](event));
+					yield self.mappers[event.eventType](event);
 				}
 
 				//the events come to us in order of first to last, so
