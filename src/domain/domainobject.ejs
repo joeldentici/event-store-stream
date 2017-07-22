@@ -1,0 +1,275 @@
+const E = require('../dsl');
+const {ConcurrentFree: F, Utility} = require('monadic-js');
+const {fromPromise} = F.Control;
+const {all} = Utility;
+const CaseClass = require('js-helpers').CaseClass;
+const uuid = require('uuid');
+const client = require('node-eventstore-client');
+
+/**
+ *	event-store-stream.DomainObject
+ *	written by Joel Dentici
+ *	on 7/21/2017
+ *
+ *	A DomainObject represents any domain object that
+ *	you store in the Event Store. This abstracts the interaction
+ *	with the EventStore that is necessary for domain objects, so
+ *	you can focus on just implementing your domain logic.
+ *
+ *	You need to do 4 things:
+ *
+ *	* Create an object without a constructor that extends DomainObject
+ *	* Add a static method `doCreate` that accepts any arguments and returns an Event
+ *	* Add an instance method `applyEvent` that accepts an event and returns a change map
+ *	* Add an instance method `snapshot` that returns a snapshot event
+ *
+ *	A change map is simply an object whose properties give the new values for the
+ *	fields of your domain object. To unset a field, set the property value to undefined.
+ *
+ *	After you have satisfied the interface, you can add any number of domain-level methods
+ *	to your object that allow other parts of your system to interact with it at a domain-level.
+ *
+ *	Note the methods provided by DomainObject return values in the StoreDSL. This implies that
+ *	you need to work with it as well, and interpret it with the StoreDSL interpreter and your event
+ *	store connection for anything to happen. This is actually a good thing as it removes the burden
+ *	of injecting an event store connection to each domain object, and simply requires you interpret
+ *	the resulting StoreDSL at the service level and run the resulting Async computation at the application
+ *	level.
+ */
+
+class DomainObject {
+	/**
+	 *	new :: UUID -> int -> Object -> DomainObject
+	 *
+	 *	Constructs a new DomainObject instance.
+	 */
+	constructor(id, version, options) {
+		for (let k of Object.keys(options)) {
+			if (typeof options[k] !== 'undefined')
+				this[k] = options[k];
+		}
+
+		this.id = id;
+		this.version = version;
+	}
+
+	/**
+	 *	create :: ...any -> StoreDSL Error DomainObject
+	 *
+	 *	Creates a new instance of the domain object.
+	 *
+	 *	Subclasses of DomainObject should provide a static
+	 *	<code>.doCreate</code> method that takes the arguments
+	 *	and returns an event signifying creation of the object.
+	 */
+	static create(...args) {
+		const obj = new this(uuid.v4(), -1, {});
+
+		return obj.addEvent(this.doCreate(...args));
+	}
+
+	/**
+	 *	load :: (UUID, int) -> StoreDSL Error DomainObject
+	 *
+	 *	Loads the domain object with the specified id up to the
+	 *	specified version. Snapshots will be used for efficient loading
+	 *	when no version is specified (the latest version). 
+	 *
+	 *	If a specific version is specified and the latest snapshot 
+	 *	is after it, then the event stream will be read from the beginning!
+	 *	This should be fine since loading a version other than the latest is
+	 *	very rare and only needs to be done to correct errors from buggy user code.
+	 *
+	 *	Subclasses don't need to do anything to use this.
+	 */
+	static load(id, loadVersion = Infinity) {
+		const self = this;
+
+		//our streams 
+		const typeName = this.prototype.constructor.name;
+		const streamId = typeName + '-' + id;
+		const snapshotStreamId = 'snapshot-' + streamId;
+
+		let initialState = new this(id, -1, {});
+
+		return do E {
+			//load position to start reading events from
+			snapshotInfo <- E.readEvent(snapshotStreamId, -1)
+			pos = if (snapshotInfo) snapshotInfo.data.position else null
+			startPosition = if (pos <= loadVersion) pos else null
+
+			//load event stream from start position
+			stream$ <- E.readFromStream(streamId, startPosition)
+
+			//only keep event #s before loadVersion and loadVersion
+			events$ = stream$
+				.filter(event => event.eventNumber <= loadVersion)
+
+			//reconsititute state of the object from event stream
+			state = fromPromise(
+				events$
+					.map(event => 
+						[event, toDomainEvent(typeName, event.eventType, event.data)])
+					.reduce(
+						(state, [oev, ev]) => state._applyEvent(ev, oev.eventNumber),
+						initialState
+					)
+					.toPromise()
+			)
+
+			//count the number of events that we load
+			loadNumEvents = fromPromise(
+				events$
+					.map(ev => 1)
+					.reduce((n, a) => n + a, 0)
+					.toPromise()
+			)
+
+			//wait for current state and # events
+			[obj, numEvents] <- all(E, [loadObj, loadNumEvents])
+
+			//determine whether we need to take a snapshot
+			if (numEvents >= self.SNAPSHOT_AFTER)
+				obj._snapshot()
+			else
+				return obj
+		};
+	}
+
+	/**
+	 *	addEvent :: DomainObject -> (Object, bool) -> StoreDSL Error DomainObject
+	 *
+	 *	Adds an event to the domain object.
+	 */
+	addEvent(event, snapshot = false) {
+		const typeName = this.constructor.name;
+		const streamId = typeName + '-' + this.id;
+		const snapshotStreamId = 'snapshot-' + streamId;
+
+		//we will store eventData to streamId
+		const eventData = toStorableEvent(typeName, event);
+
+		//we will apply domainEvent with eventNumber to our self
+		const domainEvent = new DomainEvent(event.constructor.name, event);
+		//the new version will be one more than this version
+		const newVersion = this.version + 1;
+
+		const self = this;
+
+		return do E {
+			do! E.appendToStream(streamId, eventData)
+
+			do! if (snapshot)
+				E.appendToStream(
+					snapshotStreamId,
+					toStorableEvent(typeName, {position: self.version}))
+			else
+				E.of()
+
+			return self._applyEvent(domainEvent, newVersion)
+		}
+	}
+
+	/**
+	 *	_applyEvent :: DomainObject -> (DomainEvent, int) -> DomainObject
+	 *
+	 *	Returns a new instance of this type representing the same domain
+	 *	object in the state arrived at by applying the provided event.
+	 */
+	_applyEvent(event, version) {
+		const changes = this.applyEvent(event);
+
+		const options = Object.assign({}, this, changes);
+
+		return new this.constructor(this.id, version, options);
+	}
+
+	/**
+	 *	applyEvent :: DomainObject -> DomainEvent -> Object
+	 *
+	 *	Returns changes to apply to this object in response to
+	 *	an event.
+	 *
+	 *	This should be overridden by Subclasses and should work
+	 *	with all events that may be applied to them (including historical
+	 *	ones that are no longer created).
+	 */
+	applyEvent(event) {
+		return {};
+	}
+
+	/**
+	 *	snapshot :: DomainObject -> () -> StoreDSL Error DomainObject
+	 *
+	 *	Takes a snapshot of the current domain object state.
+	 */
+	_snapshot() {
+		const event = this.snapshot();
+
+		return this.addEvent(event, true);
+	}
+}
+
+DomainObject.SNAPSHOT_AFTER = 1000;
+
+module.exports = DomainObject;
+
+/**
+ *	DomainEvent :: CaseClass
+ *
+ *	A domain event is a case-analyzable object
+ *	with the original constructor name used to
+ *	create it. We map both events that are loaded
+ *	from the Event Store and events that are added
+ *	at runtime to this before applying them. This allows
+ *	the applyEvent method to perform case analysis on
+ *	the events easily.
+ */
+class DomainEvent extends CaseClass {
+	constructor(type, data) {
+		super(type);
+
+		for (let k of Object.keys(data)) {
+			this[k] = data[k];
+		}
+	}
+
+	doCase(fn) {
+		return fn(this);
+	}
+}
+
+/**
+ *	toStorableEvent :: (string, Object) -> JsonEventData
+ *
+ *	Creates event data to be stored to the Event Store from
+ *	an event. Events are "namespaced" under the type of DomainObject
+ *	they are being added to.
+ */
+function toStorableEvent(typeName, eventData) {
+	//simulate namespaces for event types when they are stored
+	const eventType = typeName + '.' + eventData.constructor.name;
+	const eventId = uuid.v4();
+	const event = client.createJsonEventData(eventId, 
+		eventData, null, eventType);
+
+	return event;
+}
+
+/**
+ *	toDomainEvent :: (string, string, Object) -> DomainEvent
+ *
+ *	Creates a domain event given the name of the DomainObject
+ *	it will be applied to, its own original constructor name, and
+ *	the data that was loaded from the Event Store. This is used with
+ *	events loaded from the Event Store.
+ *
+ *	This essentially just removes the "namespacing" we applied
+ *	to the event before storing it, since that is unnecessary when
+ *	performing case analysis on it inside its own DomainObject.
+ */
+function toDomainEvent(className, eventType, eventData) {
+	//remove the simulated namespace
+	const type = eventType.substring(className.length + 1);
+	return new DomainEvent(type, eventData);
+}

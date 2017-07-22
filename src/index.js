@@ -1,5 +1,7 @@
 const esClient = require('node-eventstore-client');
 const StreamConnection = require('./connection.js');
+const monadic = require('monadic-js');
+monadic.loadDo('.ejs');
 
 /**
  *	event-store-stream
@@ -30,6 +32,6 @@ function createStreamConnection(settings, connString) {
 
 module.exports = esClient;
 module.exports.createStreamConnection = createStreamConnection;
-module.exports.Denormalizer = require('./denormalizer.js');
-module.exports.EventStoreESL = require('./esl');
-module.exports.DomainObject = require('./domain/domainobject.js');
+module.exports.Denormalizer = require('./denormalizer.ejs');
+module.exports.StoreDSL = require('./dsl');
+module.exports.DomainObject = require('./domain/domainobject.ejs');

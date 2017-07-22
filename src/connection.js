@@ -1,5 +1,6 @@
 const Rx = require('rx');
 const {simplifyEvent} = require('./util.js');
+const {Async} = require('monadic-js');
 
 /**
  *	event-store-stream.StreamConnection
@@ -136,7 +137,14 @@ const methods = {
 const StreamConnection = {
 	get(obj, prop) {
 		if (methods[prop]) {
-			return methods[prop](obj);
+
+			return (...args) => {
+				//defer this as there are side effects
+				return Async.create((succ, fail) => {
+					succ(methods[prop](obj)(...args));
+				});				
+			}
+
 		}
 
 		return obj[prop];

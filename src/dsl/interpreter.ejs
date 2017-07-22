@@ -1,0 +1,209 @@
+const {Async, Utility} = require('monadic-js');
+const client = require('node-eventstore-client');
+const {simplifyEvent} = require('../util.js');
+const {seqAll} = Utility;
+
+/**
+ *	event-store-stream.StoreDSL.Interpreter
+ *	written by Joel Dentici
+ *	on 6/29/2017
+ *
+ *	This interpreter maps the StoreDSL instructions to
+ *	an Async computation.
+ */
+class Interpreter {
+	constructor(es, userCredentials, batchSize) {
+		this.es = es;
+		this.userCredentials = userCredentials;
+		this.batchSize = batchSize;
+
+		/*
+		 *	versions :: Map string int
+		 *
+		 *	use to lookup version number for
+		 *	stream when starting a transaction
+		 */
+		this.versions = {};
+
+		/*
+		 *	transactions :: Map string EventStoreTransaction
+		 *
+		 *	use to lookup the transaction we are using
+		 *	for a stream.
+		 */
+		this.transactions = {};
+	}
+
+	setup() {
+		return Async.unit();
+	}
+
+	transform(expr) {
+		const es = this.es;
+		const cred = this.userCredentials;
+		const bSize = this.batchSize;
+		const versions = this.versions;
+		const transactions = this.transactions;
+		return expr.case({
+			ReadFromStream: (sid, en) => do Async {
+				//commit transaction if it exists
+				do! commit(transactions, sid)
+
+				stream$ <- es.streamFrom$(sid, en, false, cred, bSize, true)
+
+				updateVersion(stream$, sid, versions)
+
+				return stream$
+			},
+			AppendToStream: (sid, ed, ev) => do Async {
+				//version to expect for a new transaction
+				version = getVersion(versions, sid, ev)
+
+				//commit old transaction if an event version was specified
+				do! commit(transactions, sid, ev > -1)
+
+				//start a new transaction if there isn't one
+				do! if (!transactions[sid]) do Async {
+					trans <- Async.wrapPromise(es.startTransaction.bind(es))
+						(sid, version, cred)
+
+					setTransaction(trans, sid, transactions)
+
+					return undefined
+				} else
+					Async.of()
+
+				//write the events
+				trans = transactions[sid]
+				do! Async.wrapPromise(trans.write.bind(trans))(ed)
+
+				return undefined
+			},
+			CommitStream: sid => do Async {
+				do! commit(transactions, sid)
+				return undefined
+			},
+			'ReadEvents': (sid, dir, s, c) => {
+				const actions = {
+					'forward': es.readStreamEventsForward.bind(es),
+					'backward': es.readStreamEventsBackward.bind(es),
+				};
+
+				const action = Async.wrapPromise(actions[dir]);
+
+				const result = action(sid, s, c, false, cred)
+					.map(slice => slice.events)
+					.map(events => events.map(simplifyEvent));
+
+				return result;
+			},
+			default: _ => {},
+		});
+	}
+
+	cleanupSuccess(res) {
+		const transactions = Object.keys(this.transactions)
+			.map(k => this.transactions[k]);
+
+		//commit all started transactions
+		return do Async {
+			commits = transactions.map(t => 
+				Async.wrapPromise(t.commit.bind(t))())
+
+			do! seqAll(Async, commits)
+
+			return undefined
+		}
+	}
+
+	cleanupFail(err) {
+		const transactions = Object.keys(this.transactions)
+			.map(k => this.transactions[k]);
+
+		transactions.forEach(t => {
+			try {
+				t.rollback();
+			}
+			catch (e) {}
+		});
+
+		return Async.of();
+	}
+}
+
+/**
+ *	updateVersion :: (Observable Event, string, Map string int) -> ()
+ *
+ *	Updates the event version in versions with the last event
+ *	in a stream.
+ */
+function updateVersion(stream$, sid, versions) {
+	stream$
+		.startWith({eventNumber: undefined})
+		.last()
+		.toPromise()
+		.then(ev => {
+			versions[sid] = ev.eventNumber;
+		});
+}
+
+/**
+ *	commitT :: EventStoreTransaction -> Async () EventStoreError ()
+ *
+ *	Commits an event store transaction.
+ */
+function commitT(trans) {
+	return Async.wrapPromise(trans.commit.bind(trans))();
+}
+
+/**
+ *	commit :: ((Map string EventStoreTransaction), int, bool) -> Async () EventStoreError ()
+ *
+ *	Commits the transaction for a stream if it exists and the
+ *	specified condition is true.
+ */
+function commit(transactions, streamId, cond = true) {
+	const trans = transactions[streamId];
+	return expr {
+		if (trans && cond) do Async {
+			delete transactions[streamId]
+			do! commitT(trans)
+		} else
+			Async.of()
+	};
+}
+
+/**
+ *	getVersion :: ((Map string int), string, int) -> int
+ *
+ *	Gets the version to start a new transaction with.
+ *
+ *	If the specified version is > -1, then it is used,
+ *	otherwise the stored version for the stream is used.
+ */
+function getVersion(versions, sid, ev) {
+	return expr {
+		if (ev > -1) 
+			ev 
+		else 
+			(versions[sid] || client.expectedVersion.any)		
+	};
+}
+
+/**
+ *	setTransaction :: (EventStoreTransaction, string, (Map string EventStoreTransaction)) -> ()
+ *
+ *	Stores the transaction for the stream
+ */
+function setTransaction(trans, sid, transactions) {
+	transactions[sid] = trans;
+}
+
+/**
+ *	interpreter :: StreamConnection -> UserCredentials -> int -> (Free f a -> Async a) -> Interpreter
+ *
+ *	Creates an interpreter constructor for the specified
+ *	stream connection.
+ */
+module.exports = (es, userCredentials, batchSize) => 
+	() => new Interpreter(es, userCredentials, batchSize);

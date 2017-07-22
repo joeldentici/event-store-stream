@@ -1,11 +1,11 @@
 {
   "name": "event-store-stream",
   "version": "0.0.1",
-  "description": "Provides RxJS Observables for Event Store (geteventstore.com) subscriptions",
+  "description": "Provides added functionality to node-eventstore-client so it can be more easily used",
   "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "document": "hmdoc 'Event Store Stream' src > documentation.html"
+    "document": "hmdoc 'Event Store Stream' src markdown > documentation.md"
   },
   "repository": {
     "type": "git",

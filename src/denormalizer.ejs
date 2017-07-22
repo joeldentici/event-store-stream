@@ -1,0 +1,180 @@
+const {Transaction: T} = require('transactional-db');
+const {seqAll} = require('monadic-js').Utility;
+const Rx = require('rx');
+const esClient = require('node-eventstore-client');
+
+const Long = require('long');
+
+
+/**
+ *	event-store-stream.Denormalizer
+ *	written by Joel Dentici
+ *	on 6/20/2017
+ *
+ *	A Denormalizer provides a layer between queries/statements
+ *	to update a read model and the Event Store that conveniently
+ *	keeps track of your position in the Event Store and running your
+ *	statements in a transaction.
+ *
+ *	All you need to do for setup is provide the event store connection and database
+ *	manager to the denormalizer. Then you register each of your read model updaters
+ *	to map specific events to statements by calling `.map`. Once you have registered
+ *	all of your updaters, call `.start` to begin the denormalization process.
+ *
+ *	There is no need for shutdown logic, since if this is in the middle of processing
+ *	an update transaction when the server is killed, it will resume safely at the same
+ *	point the next time it is brought up.
+ */
+class Denormalizer {
+	/**
+	 *	new :: (DBHManager, StreamConnection, int, int, IBus) -> Denormalizer
+	 *
+	 *	Creates a new denormalizer. Queries are ran on dbm, events
+	 *	are loaded from es. If an optional event bus is supplied, then
+	 *	events emitted by mappers will be published to it.
+	 *
+	 *	Events are loaded batchSize events at a time.
+	 *
+	 *	Events are buffered by the provided throttle time (milliseconds)
+	 *	and processed together in the window they occur in.
+	 */
+	constructor(dbm, es, batchSize, throttle, eventBus = {publish: (_,__) => null}) {
+		this.dbm = dbm;
+		this.es = es;
+		this.bus = eventBus;
+		this.batchSize = batchSize;
+		this.throttle = throttle;
+		this.mappers = {};
+	}
+
+	/**
+	 *	map :: Denormalizer -> (string, Event -> Transaction ()) -> ()
+	 *
+	 *	Register a function that maps events of a specific type
+	 *	to queries on the database.
+	 */
+	map(eventType, mapper) {
+		this.mappers[eventType] = mapper;
+	}
+
+	/**
+	 *	start :: Denormalizer -> () -> ()
+	 *
+	 *	Start the denormalizer.
+	 */
+	start() {
+		const eventTypes = Object.keys(this.mappers);
+		const self = this;
+
+		//Async () DBError (Observable [Event])
+		const events = do Async {
+			//get position fields from database
+			[row] <- self.dbm.runTransaction(T.query(`
+				SELECT low_commit,high_commit,low_prepare,high_prepare from history`))
+
+			{low_commit, high_commit, low_prepare, high_prepare} = row
+
+			//position that can be used with eventstore-client
+			position = getPosition(low_commit, high_commit, low_prepare, high_prepare)
+
+			//load the all$ stream starting at the position we had stored
+			all$ <- self.es.allFrom$(
+				position, false, self.es.credentials, self.batchSize)
+
+			//filter out events we are not interested and buffer events
+			//since they may come in faster than we can process them
+			events$ = all$
+				.filter(interested(eventTypes))
+				.buffer(Rx.Observable.interval(self.throttle))
+				.filter(x => x.length)
+
+			return events$
+		}
+
+		//run the denormalizer on the event stream
+		//events.fork(events$ => self.run(events), e => console.error(e));
+	}
+
+	/**
+	 *	run :: Denormalizer -> Observable [Event] -> ()
+	 *
+	 *	Processes events through the mappers and then
+	 *	runs a transaction for each batch of events on
+	 *	the database to update it.
+	 *
+	 *	This is written such that if a new window of events
+	 *	comes in while the previous window is being processed,
+	 *	processing of the new window is delayed until the previous
+	 *	window finishes. This ensures that all events are always
+	 *	processed in the order they are received.
+	 */
+	run(events$) {
+		//this represents the currently running Async computation
+		//and is used to make sure we only have one computation
+		//ever running at a time (to 100% properly handle events
+		//in the order they are received)
+		let current = Promise.resolve();
+
+		events$.forEach(events => {
+			const self = this;
+
+			//next Async computation to run
+			const next = this.dbm.runTransaction(do T {
+				//map events to their queries
+				queries = events.map(event => 
+					self.mappers[event.eventType](event))
+
+				//perform queries from left-to-right, sequentially
+				do! seqAll(T, queries)
+
+				//position of the last event we handled
+				position = events[events.length - 1].position
+				low_commit = position.commitPosition.getLowBits()
+				high_commit = position.commitPosition.getHighBits()
+				low_prepare = position.preparePosition.getLowBits()
+				high_prepare = position.preparePosition.getHighBits()
+
+				//update the last handled position in the database
+				//so we can resume from there if anything goes wrong
+				do! T.query(`UPDATE history SET 
+					low_commit = ?, high_commit = ?,
+					low_prepare = ?, high_prepare = ?`,
+					low_commit,
+					high_commit,
+					low_prepare,
+					high_prepare)
+			}, this.bus);
+
+			//the new current computation is obtained by
+			//waiting for the current one to finish, then
+			//running the next one and waiting for it to finish
+			current = current.then(_ => next.toPromise());
+		});
+	}
+}
+
+function getPosition(low_commit, high_commit, low_prepare, high_prepare) {
+	return expr {
+		if (low_commit === 0 && high_commit === 0 
+		&& low_prepare === 0 && high_prepare === 0)
+			null 
+		else 
+			new esClient.Position(
+				new Long(low_commit, high_commit),
+				new Long(low_prepare, high_prepare))
+	};
+}
+
+/**
+ *	interested :: [string] -> Event -> bool
+ *
+ *	Creates a filter predicate for the specified event types
+ */
+function interested(eventTypes) {
+	const types = new Set(eventTypes);
+	return function(event) {
+		return types.has(event.eventType);
+	}
+}
+
+module.exports = Denormalizer;
