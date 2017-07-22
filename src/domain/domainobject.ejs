@@ -126,7 +126,7 @@ class DomainObject {
 			)
 
 			//wait for current state and # events
-			[obj, numEvents] <- all(E, [loadObj, loadNumEvents])
+			[obj, numEvents] <- all(E, [state, loadNumEvents])
 
 			//determine whether we need to take a snapshot
 			if (numEvents >= self.SNAPSHOT_AFTER)
@@ -199,7 +199,7 @@ class DomainObject {
 	}
 
 	/**
-	 *	snapshot :: DomainObject -> () -> StoreDSL Error DomainObject
+	 *	_snapshot :: DomainObject -> () -> StoreDSL Error DomainObject
 	 *
 	 *	Takes a snapshot of the current domain object state.
 	 */
