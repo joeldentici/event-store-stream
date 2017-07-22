@@ -18,10 +18,10 @@ const client = require('node-eventstore-client');
  *
  *	You need to do 4 things:
  *
- *	* Create an object without a constructor that extends DomainObject
- *	* Add a static method `doCreate` that accepts any arguments and returns an Event
- *	* Add an instance method `applyEvent` that accepts an event and returns a change map
- *	* Add an instance method `snapshot` that returns a snapshot event
+ *	1. Create an object without a constructor that extends DomainObject
+ *	2. Add a static method `doCreate` that accepts any arguments and returns an Event
+ *	3. Add an instance method `applyEvent` that accepts an event and returns a change map
+ *	4. Add an instance method `snapshot` that returns a snapshot event
  *
  *	A change map is simply an object whose properties give the new values for the
  *	fields of your domain object. To unset a field, set the property value to undefined.

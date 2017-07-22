@@ -89,10 +89,10 @@ class Denormalizer {
 				.filter(x => x.length)
 
 			return events$
-		}
+		};
 
 		//run the denormalizer on the event stream
-		//events.fork(events$ => self.run(events), e => console.error(e));
+		events.fork(events$ => self.run(events), e => console.error(e));
 	}
 
 	/**
