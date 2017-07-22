@@ -112,6 +112,9 @@ level.
 
 Returns a new instance of this type representing the same domain
 object in the state arrived at by applying the provided event.
+#### _snapshot :: DomainObject &#8594; () &#8594; StoreDSL Error DomainObject
+
+Takes a snapshot of the current domain object state.
 #### addEvent :: DomainObject &#8594; (Object, bool) &#8594; StoreDSL Error DomainObject
 
 Adds an event to the domain object.
@@ -154,9 +157,6 @@ Subclasses don't need to do anything to use this.
 #### new :: UUID &#8594; int &#8594; Object &#8594; DomainObject
 
 Constructs a new DomainObject instance.
-#### snapshot :: DomainObject &#8594; () &#8594; StoreDSL Error DomainObject
-
-Takes a snapshot of the current domain object state.
 #### toDomainEvent :: (string, string, Object) &#8594; DomainEvent
 
 Creates a domain event given the name of the DomainObject
