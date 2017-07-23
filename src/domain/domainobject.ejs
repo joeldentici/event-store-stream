@@ -1,8 +1,7 @@
 const E = require('../dsl');
 const {ConcurrentFree: F, Utility} = require('monadic-js');
 const {fromPromise} = F.Control;
-const {all} = Utility;
-const CaseClass = require('js-helpers').CaseClass;
+const {all, CaseClass} = Utility;
 const uuid = require('uuid');
 const client = require('node-eventstore-client');
 

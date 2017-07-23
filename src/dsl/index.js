@@ -1,5 +1,5 @@
-const Free = require('monadic-js').ConcurrentFree;
-const CaseClass = require('js-helpers').CaseClass;
+const {ConcurrentFree: Free, Utility} = require('monadic-js');
+const {CaseClass} = Utility;
 
 /**
  *	event-store-stream.StoreDSL
