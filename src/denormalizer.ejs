@@ -1,5 +1,6 @@
 const {Transaction: T} = require('transactional-db');
-const {seqAll} = require('monadic-js').Utility;
+const {Utility, Async,} = require('monadic-js');
+const {seqAll} = Utility;
 const Rx = require('rx');
 const esClient = require('node-eventstore-client');
 
@@ -85,6 +86,7 @@ class Denormalizer {
 			//since they may come in faster than we can process them
 			events$ = all$
 				.filter(interested(eventTypes))
+				.map(simplifyEvent)
 				.buffer(Rx.Observable.interval(self.throttle))
 				.filter(x => x.length)
 
@@ -92,7 +94,7 @@ class Denormalizer {
 		};
 
 		//run the denormalizer on the event stream
-		events.fork(events$ => self.run(events), e => console.error(e));
+		events.fork(events$ => self.run(events$), e => console.error(e));
 	}
 
 	/**
@@ -175,6 +177,18 @@ function interested(eventTypes) {
 	return function(event) {
 		return types.has(event.eventType);
 	}
+}
+
+function simplifyEvent(event) {
+	const streamId = event.eventStreamId;
+	const sepAt = streamId.indexOf('-');
+	const domainObjectType = streamId.substring(0, sepAt);
+	const domainObjectId = streamId.substring(sepAt + 1);
+
+	return Object.assign({}, event, {
+		domainObjectType,
+		domainObjectId
+	});
 }
 
 module.exports = Denormalizer;
