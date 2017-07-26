@@ -107,8 +107,7 @@ class Interpreter {
 
 		//commit all started transactions
 		return do Async {
-			commits = transactions.map(t => 
-				Async.wrapPromise(t.commit.bind(t))())
+			commits = transactions.map(commitT)
 
 			do! seqAll(Async, commits)
 
