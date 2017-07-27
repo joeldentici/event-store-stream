@@ -31,6 +31,7 @@ function createStreamConnection(settings, connString) {
 }
 
 module.exports = esClient;
+module.exports.StreamConnection = StreamConnection;
 module.exports.createStreamConnection = createStreamConnection;
 module.exports.Denormalizer = require('./denormalizer');
 module.exports.StoreDSL = require('./dsl');

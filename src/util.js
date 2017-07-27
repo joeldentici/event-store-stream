@@ -1,4 +1,4 @@
-
+const Rx = require('rx');
 /**
  *	event-store-stream.util
  *	written by Joel Dentici
@@ -34,7 +34,7 @@ exports.simplifyEvent = function(event) {
  *	an event is tied to.
  */
 const addDomainInfo = exports.addDomainInfo = function(event) {
-	const streamId = event.eventStreamId;
+	const streamId = event.eventStreamId || '';
 	const sepAt = streamId.indexOf('-');
 	const domainObjectType = streamId.substring(0, sepAt);
 	const domainObjectId = streamId.substring(sepAt + 1);

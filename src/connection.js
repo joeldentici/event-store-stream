@@ -141,7 +141,7 @@ const StreamConnection = {
 			return (...args) => {
 				//defer this as there are side effects
 				return Async.create((succ, fail) => {
-					succ(methods[prop](obj)(...args));
+					return succ(methods[prop](obj)(...args));
 				});				
 			}
 

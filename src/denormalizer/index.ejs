@@ -1,7 +1,6 @@
 const {Transaction: T} = require('transactional-db');
 const {Utility, Async,} = require('monadic-js');
 const {seqAll} = Utility;
-const Rx = require('rx');
 const esClient = require('node-eventstore-client');
 
 const Long = require('long');
@@ -66,12 +65,10 @@ class Denormalizer {
 	 */
 	start() {
 		const eventTypes = Object.keys(this.mappers);
-		const self = this;
-
-		//Async () DBError (Observable [Event])
-		const events = do Async {
+		//Async () Error (Observable ())
+		return do Async {
 			//get position fields from database
-			[row] <- self.dbm.runTransaction(T.query(`
+			[row] <- this.dbm.runTransaction(T.query(`
 				SELECT low_commit,high_commit,low_prepare,high_prepare from history`))
 
 			{low_commit, high_commit, low_prepare, high_prepare} = row
@@ -80,18 +77,19 @@ class Denormalizer {
 			position = getPosition(low_commit, high_commit, low_prepare, high_prepare)
 
 			//load the all$ stream starting at the position we had stored
-			all$ <- self.es.allFrom$(
-				position, false, self.es.credentials, self.batchSize)
+			all$ <- this.es.allFrom$(
+				position, false, this.es.credentials, this.batchSize)
 
 			//filter out events we are not interested and buffer events
 			//since they may come in faster than we can process them
-			events$ = getInterestingEvents(all$, eventTypes, self.throttle)
+			events$ = getInterestingEvents(all$, eventTypes, this.throttle)
 
-			return events$
-		};
+			run$ = this.run(events$)
 
-		//run the denormalizer on the event stream
-		events.fork(events$ => self.run(events$), e => console.error(e));
+			run$.forEach(x => x)
+
+			return run$
+		}.run();
 	}
 
 	/**
@@ -108,20 +106,12 @@ class Denormalizer {
 	 *	processed in the order they are received.
 	 */
 	run(events$) {
-		//this represents the currently running Async computation
-		//and is used to make sure we only have one computation
-		//ever running at a time (to 100% properly handle events
-		//in the order they are received)
-		let current = Promise.resolve();
-
-		events$.forEach(events => {
-			const self = this;
-
-			//next Async computation to run
-			const next = this.dbm.runTransaction(do T {
+		events$.concatMap(events => {
+			//computation to run
+			return this.dbm.runTransaction(do T {
 				//map events to their queries
 				queries = events.map(event => 
-					self.mappers[event.eventType](event))
+					this.mappers[event.eventType](event))
 
 				//perform queries from left-to-right, sequentially
 				do! seqAll(T, queries)
@@ -142,13 +132,7 @@ class Denormalizer {
 					high_commit,
 					low_prepare,
 					high_prepare)
-			}, this.bus);
-
-			//the new current computation is obtained by
-			//waiting for the current one to finish, then
-			//running the next one and waiting for it to finish
-			const runNext = _ => next.toPromise();
-			current = current.then(runNext, runNext);
+			}, this.bus).toObservable();
 		});
 	}
 }
