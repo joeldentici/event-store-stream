@@ -1,4 +1,7 @@
 # event-store-stream
+[![Build Status](https://travis-ci.org/joeldentici/event-store-stream.png?branch=master)](https://travis-ci.org/joeldentici/event-store-stream)
+[![Coverage Status](https://coveralls.io/repos/github/joeldentici/event-store-stream/badge.png?branch=master)](https://coveralls.io/github/joeldentici/event-store-stream?branch=master)
+
 This package adds 4 new methods to the event store connection from `node-eventstore-client`.
 
 See [documentation.html](documentation.html) for a reference on these methods.
