@@ -38,7 +38,7 @@ class Effector {
 	}
 
 	/**
-	 *	map :: Denormalizer -> (string, Event -> Transaction ()) -> ()
+	 *	map :: Effector -> (string, Event -> Transaction ()) -> ()
 	 *
 	 *	Register a function that maps events of a specific type
 	 *	to queries on the database.
@@ -48,9 +48,9 @@ class Effector {
 	}
 
 	/**
-	 *	start :: Denormalizer -> () -> ()
+	 *	start :: Effector -> () -> ()
 	 *
-	 *	Start the denormalizer.
+	 *	Start the effector.
 	 */
 	start() {
 		const eventTypes = Object.keys(this.mappers);
@@ -77,7 +77,7 @@ class Effector {
 	}
 
 	/**
-	 *	run :: Denormalizer -> Observable [Event] -> ()
+	 *	run :: Effector -> Observable [Event] -> ()
 	 *
 	 *	Processes events through the mappers and then
 	 *	runs all the programs for the current event window.
@@ -147,4 +147,4 @@ function simplifyEvent(event) {
 	});
 }
 
-module.exports = Denormalizer;
+module.exports = Effector;
