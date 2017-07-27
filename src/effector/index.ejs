@@ -2,6 +2,7 @@ const {Utility, Async, ConcurrentFree: F} = require('monadic-js');
 const {seqAll} = Utility;
 const Rx = require('rx');
 const esClient = require('node-eventstore-client');
+const {getInterestingEvents} = require('../util.js');
 
 
 /**
@@ -63,11 +64,7 @@ class Effector {
 
 			//filter out events we are not interested and buffer events
 			//since they may come in faster than we can process them
-			events$ = all$
-				.filter(interested(eventTypes))
-				.map(simplifyEvent)
-				.buffer(Rx.Observable.interval(self.throttle))
-				.filter(x => x.length)
+			events$ = getInterestingEvents(all$, eventTypes, self.throttle)
 
 			return events$
 		};
@@ -121,30 +118,6 @@ class Effector {
 			current = current.then(runNext, runNext);
 		});
 	}
-}
-
-/**
- *	interested :: [string] -> Event -> bool
- *
- *	Creates a filter predicate for the specified event types
- */
-function interested(eventTypes) {
-	const types = new Set(eventTypes);
-	return function(event) {
-		return types.has(event.eventType);
-	}
-}
-
-function simplifyEvent(event) {
-	const streamId = event.eventStreamId;
-	const sepAt = streamId.indexOf('-');
-	const domainObjectType = streamId.substring(0, sepAt);
-	const domainObjectId = streamId.substring(sepAt + 1);
-
-	return Object.assign({}, event, {
-		domainObjectType,
-		domainObjectId
-	});
 }
 
 module.exports = Effector;
