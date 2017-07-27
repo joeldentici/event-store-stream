@@ -150,7 +150,8 @@ class Denormalizer {
 			//the new current computation is obtained by
 			//waiting for the current one to finish, then
 			//running the next one and waiting for it to finish
-			current = current.then(_ => next.toPromise());
+			const runNext = _ => next.toPromise();
+			current = current.then(runNext, runNext);
 		});
 	}
 }

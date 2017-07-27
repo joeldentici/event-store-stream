@@ -1,0 +1,150 @@
+const {Utility, Async, ConcurrentFree: F} = require('monadic-js');
+const {seqAll} = Utility;
+const Rx = require('rx');
+const esClient = require('node-eventstore-client');
+
+const Long = require('long');
+
+
+/**
+ *	event-store-stream.Denormalizer
+ *	written by Joel Dentici
+ *	on 6/20/2017
+ *
+ *	An Effector sits between a DSL that runs effects in response to events and
+ *	the Event Store that provides the events. "Programs" in the DSL are subscribed
+ *	to map an event of some type to an instruction (or composition of instructions)
+ *	in the DSL.
+ *
+ *	All you need to do for setup is provide the event store connection and a function
+ *	to interpret the DSL programs. Then you register each of your programs to run when
+ *	an event occurs by calling `.map`. Once you have registered all of your programs,
+ *	call `.start` to begin the denormalization process.
+ */
+class Effector {
+	/**
+	 *	new :: ((ConcurrentFree f e a -> Async e a), StreamConnection, int) -> Effector
+	 *
+	 *	Creates a new effector. Events are mapped to instructions to run with
+	 *	the provided interpreter.
+	 *
+	 *	Events are buffered by the provided throttle time (milliseconds)
+	 *	and processed together in the window they occur in.
+	 */
+	constructor(interpret, es, throttle) {
+		this.interpret = interpret;
+		this.es = es;
+		this.batchSize = batchSize;
+		this.throttle = throttle;
+		this.mappers = {};
+	}
+
+	/**
+	 *	map :: Denormalizer -> (string, Event -> Transaction ()) -> ()
+	 *
+	 *	Register a function that maps events of a specific type
+	 *	to queries on the database.
+	 */
+	map(eventType, mapper) {
+		this.mappers[eventType] = mapper;
+	}
+
+	/**
+	 *	start :: Denormalizer -> () -> ()
+	 *
+	 *	Start the denormalizer.
+	 */
+	start() {
+		const eventTypes = Object.keys(this.mappers);
+		const self = this;
+
+		//Async () DBError (Observable [Event])
+		const events = do Async {
+			//load the all$ stream
+			all$ <- self.es.all$(false, self.es.credentials)
+
+			//filter out events we are not interested and buffer events
+			//since they may come in faster than we can process them
+			events$ = all$
+				.filter(interested(eventTypes))
+				.map(simplifyEvent)
+				.buffer(Rx.Observable.interval(self.throttle))
+				.filter(x => x.length)
+
+			return events$
+		};
+
+		//run the denormalizer on the event stream
+		events.fork(events$ => self.run(events$), e => console.error(e));
+	}
+
+	/**
+	 *	run :: Denormalizer -> Observable [Event] -> ()
+	 *
+	 *	Processes events through the mappers and then
+	 *	runs all the programs for the current event window.
+	 *
+	 *	This is written such that if a new window of events
+	 *	comes in while the previous window is being processed,
+	 *	processing of the new window is delayed until the previous
+	 *	window finishes. This ensures that all events are always
+	 *	processed in the order they are received.
+	 */
+	run(events$) {
+		//this represents the currently running Async computation
+		//and is used to make sure we only have one computation
+		//ever running at a time (to 100% properly handle events
+		//in the order they are received)
+		let current = Promise.resolve();
+
+		events$.forEach(events => {
+			const self = this;
+
+			//next Async computation to run
+			const next = this.interpret(do F {
+				//map events to their queries
+				programs = events.map(event => 
+					self.mappers[event.eventType](event))
+
+				//run programs from left-to-right sequentially:
+				//we need to do sequential execution to ensure that
+				//events are handled in the order they occur. Otherwise
+				//we might expect some data to be in place to use in an
+				//effect, that hasn't been put there yet.
+				do! seqAll(F, programs)
+			});
+
+			//the new current computation is obtained by
+			//waiting for the current one to finish, then
+			//running the next one and waiting for it to finish
+			const runNext = _ => next.toPromise();
+			current = current.then(runNext, runNext);
+		});
+	}
+}
+
+/**
+ *	interested :: [string] -> Event -> bool
+ *
+ *	Creates a filter predicate for the specified event types
+ */
+function interested(eventTypes) {
+	const types = new Set(eventTypes);
+	return function(event) {
+		return types.has(event.eventType);
+	}
+}
+
+function simplifyEvent(event) {
+	const streamId = event.eventStreamId;
+	const sepAt = streamId.indexOf('-');
+	const domainObjectType = streamId.substring(0, sepAt);
+	const domainObjectId = streamId.substring(sepAt + 1);
+
+	return Object.assign({}, event, {
+		domainObjectType,
+		domainObjectId
+	});
+}
+
+module.exports = Denormalizer;
