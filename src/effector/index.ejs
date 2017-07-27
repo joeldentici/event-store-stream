@@ -3,11 +3,9 @@ const {seqAll} = Utility;
 const Rx = require('rx');
 const esClient = require('node-eventstore-client');
 
-const Long = require('long');
-
 
 /**
- *	event-store-stream.Denormalizer
+ *	event-store-stream.Effector
  *	written by Joel Dentici
  *	on 6/20/2017
  *
@@ -102,7 +100,7 @@ class Effector {
 
 			//next Async computation to run
 			const next = this.interpret(do F {
-				//map events to their queries
+				//map events to their "programs"
 				programs = events.map(event => 
 					self.mappers[event.eventType](event))
 
@@ -112,6 +110,8 @@ class Effector {
 				//we might expect some data to be in place to use in an
 				//effect, that hasn't been put there yet.
 				do! seqAll(F, programs)
+
+				return undefined
 			});
 
 			//the new current computation is obtained by
