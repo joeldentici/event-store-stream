@@ -1,7 +1,7 @@
 {
   "name": "event-store-stream",
   "version": "0.0.1",
-  "description": "Provides added functionality to node-eventstore-client so it can be more easily used",
+  "description": "Tools to interact with Event Store (geteventstore.com)",
   "main": "src/index.js",
   "scripts": {
     "document": "hmdoc 'Event Store Stream' src markdown > documentation.md",
