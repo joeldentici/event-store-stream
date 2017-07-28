@@ -207,7 +207,7 @@ denormalizer.map('ShoppingCart.ProductAdded', ev => do T {
 				items
 			})
 		},
-		Nothing: T.of()
+		Nothing: _ => T.of()
 	})
 });
 
