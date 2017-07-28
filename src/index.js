@@ -25,12 +25,12 @@ monadic.loadDo('.ejs');
  *	RxJS Observable streams of subscriptions.
  */
 function createStreamConnection(settings, connString) {
-	const esConnection = esClient.createConnection(settings, connString);
+	const esConnection = module.exports.createConnection(settings, connString);
 
 	return new Proxy(esConnection, StreamConnection);
 }
 
-module.exports = esClient;
+module.exports = Object.create(esClient);
 module.exports.StreamConnection = StreamConnection;
 module.exports.createStreamConnection = createStreamConnection;
 module.exports.Denormalizer = require('./denormalizer');
