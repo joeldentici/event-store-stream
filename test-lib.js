@@ -42,6 +42,8 @@ class Transaction {
 	}
 
 	write(events) {
+		events = events instanceof Array ? events : [events];
+		events = events.map(event => this.conn.eventAdapter(event));
 		this.tape = this.tape.concat(events);
 		return Promise.resolve();
 	}
@@ -63,10 +65,11 @@ class Transaction {
 
 /* Mock connection */
 class Connection {
-	constructor() {
+	constructor(eventAdapter = (x => x)) {
 		this.subscriptions = {};
 		this.all = [];
 		this.events = {};
+		this.eventAdapter = eventAdapter;
 	}
 
 	notify(sid, event) {
@@ -88,6 +91,8 @@ class Connection {
 	}
 
 	subscribeToStreamFrom(sid, pos, links, onEvent, onLive, onDone, credentials, batch) {
+		pos = pos || 0;
+
 		if (!this.subscriptions[sid]) {
 			this.subscriptions[sid] = [];
 		}
@@ -95,11 +100,12 @@ class Connection {
 		const s = new Subscription(onEvent, onDone, onLive);
 		this.subscriptions[sid].push(s);
 
-		setImmediate(() => {
+		setTimeout(() => {
 			const events = (this.events[sid] || []).slice(pos);
-
 			events.forEach(event => s.push(event, false));
-		})
+			onLive();
+			s.live = true;
+		}, 100)
 
 		return s;
 	}
@@ -130,7 +136,9 @@ class Connection {
 	}
 
 	readStreamEventsForward(sid, start, count, b, credentials) {
-		return (this.events[sid] || []).slice(start).slice(0, count);
+		const res = (this.events[sid] || []).slice(start).slice(0, count);
+
+		return Promise.resolve({events: res});
 	}
 
 	readStreamEventsBackward(sid, start, count, b, credentials) {
@@ -142,7 +150,9 @@ class Connection {
 			return events.slice(start, start + end);	
 		}
 
-		return get(this.events[sid] || [], start, count);
+		const res = get(this.events[sid] || [], start, count);
+
+		return Promise.resolve({events: res});
 	}
 }
 
@@ -160,6 +170,19 @@ function makeEvent(type, data) {
 	};
 }
 
+function wrapEvent(event) {
+	return {
+		originalEvent: Object.assign({}, event, {
+			eventType: event.type,
+			eventNumber: 0
+		}),
+		originalPosition: new client.Position(
+			new Long(0, 0),
+			new Long(0, 0)
+		)
+	}
+};
+
 function writeEvent(conn, stream, type, data) {
 	const event = makeEvent(type, data);
 	return conn.startTransaction(stream, 0, null)
@@ -172,5 +195,6 @@ function writeEvent(conn, stream, type, data) {
 module.exports = Object.assign({}, defaults, {
 	Connection,
 	makeEvent,
-	writeEvent
+	writeEvent,
+	wrapEvent
 });
