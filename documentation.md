@@ -6,6 +6,7 @@ Click a module name below to see its documentation
 * [event-store-stream](#event-store-stream)
 * [event-store-stream.Denormalizer](#event-store-stream-denormalizer)
 * [event-store-stream.DomainObject](#event-store-stream-domainobject)
+* [event-store-stream.Effector](#event-store-stream-effector)
 * [event-store-stream.StoreDSL](#event-store-stream-storedsl)
 * [event-store-stream.StoreDSL.Interpreter](#event-store-stream-storedsl-interpreter)
 * [event-store-stream.StreamConnection](#event-store-stream-streamconnection)
@@ -47,9 +48,6 @@ all of your updaters, call `.start` to begin the denormalization process.
 There is no need for shutdown logic, since if this is in the middle of processing
 an update transaction when the server is killed, it will resume safely at the same
 point the next time it is brought up.
-#### interested :: [string] &#8594; Event &#8594; bool
-
-Creates a filter predicate for the specified event types
 #### map :: Denormalizer &#8594; (string, Event &#8594; Transaction ()) &#8594; ()
 
 Register a function that maps events of a specific type
@@ -172,6 +170,48 @@ performing case analysis on it inside its own DomainObject.
 Creates event data to be stored to the Event Store from
 an event. Events are "namespaced" under the type of DomainObject
 they are being added to.
+## event-store-stream.Effector
+<a name="event-store-stream-effector"></a>
+**Written By:** Joel Dentici
+
+**Written On:** 6/20/2017
+
+An Effector sits between a DSL that runs effects in response to events and
+the Event Store that provides the events. "Programs" in the DSL are subscribed
+to map an event of some type to an instruction (or composition of instructions)
+in the DSL.
+
+All you need to do for setup is provide the event store connection and a function
+to interpret the DSL programs. Then you register each of your programs to run when
+an event occurs by calling `.map`. Once you have registered all of your programs,
+call `.start` to begin the denormalization process.
+#### map :: Effector &#8594; (string, Event &#8594; Transaction ()) &#8594; ()
+
+Register a function that maps events of a specific type
+to queries on the database.
+#### new :: ((ConcurrentFree f e a &#8594; Async e a), StreamConnection, int) &#8594; Effector
+
+Creates a new effector. Events are mapped to instructions to run with
+the provided interpreter.
+
+Events are buffered by the provided throttle time (milliseconds)
+and processed together in the window they occur in.
+#### run :: Effector &#8594; Observable [Event] &#8594; Observable ()
+
+Processes events through the mappers and then
+runs all the programs for the current event window.
+
+This is written such that if a new window of events
+comes in while the previous window is being processed,
+processing of the new window is delayed until the previous
+window finishes. This ensures that all events are always
+processed in the order they are received.
+#### start :: Effector &#8594; () &#8594; Observable () | ()
+
+Start the effector. The return value will not
+actually be an Observable when using the normal Async
+scheduler, but instead undefined. We only need to get the
+Observable for testing anyway.
 ## event-store-stream.StoreDSL
 <a name="event-store-stream-storedsl"></a>
 **Written By:** Joel Dentici
@@ -295,6 +335,18 @@ live events.
 **Written On:** 6/29/2017
 
 Utility functions used internally.
+#### addDomainInfo :: Event &#8594; DomainObjectEvent
+
+Adds information about the domain object that
+an event is tied to.
+#### getInterestingEvents :: (Observable Event, [string], int) &#8594; Observable [Event]
+
+Map an event stream to a stream of event windows, containing events
+of the specified types. Windows are buffered for the provided throttle
+time.
+#### interested :: [string] &#8594; Event &#8594; bool
+
+Creates a filter predicate for the specified event types
 #### simplifyEvent :: ResolvedEvent &#8594; Event
 
 Simplifies the event object from the one returned
