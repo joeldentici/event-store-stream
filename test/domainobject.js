@@ -57,8 +57,16 @@ exports.DomainObject = {
 	'test': test => {
 		const check = eq(test);
 
+
 		const base = new Connection(wrapEvent);
-		const es = new Proxy(base, StreamConnection);
+
+
+		const oldCreate = client.createConnection;
+		client.createConnection = () => base;
+
+		const es = client.createStreamConnection();
+
+		client.createConnection = oldCreate;
 
 		const interpret = F.interpret(
 			Async,
@@ -69,6 +77,10 @@ exports.DomainObject = {
 		const prog = ShoppingCart.create('blah')
 			.chain(cart => cart.addProduct('Chocolate', 10)
 				.chain(c => StoreDSL.commitStream('ShoppingCart-'+c.id).map(_ => c))
+				.chain(c => StoreDSL.readEvents('ShoppingCart-'+c.id, 0, 1).map(_ => {
+					check(_[0].type, 'ShoppingCart.ShoppingCartCreated')
+					return c
+				}))
 			)
 			.chain(x => {
 				return ShoppingCart.load(x.id).chain(

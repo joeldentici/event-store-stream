@@ -94,8 +94,8 @@ class DomainObject {
 		return do E {
 			//load position to start reading events from
 			snapshotInfo <- E.readEvent(snapshotStreamId, -1)
-			pos = if (snapshotInfo) snapshotInfo.data.position else null
-			startPosition = if (pos <= loadVersion) pos else null
+			pos = if (snapshotInfo) snapshotInfo.data.position else undefined
+			startPosition = if (pos <= loadVersion) pos else undefined
 
 			//load event stream from start position
 			stream$ <- E.readFromStream(streamId, startPosition)
