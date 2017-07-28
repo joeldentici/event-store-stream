@@ -159,15 +159,75 @@ Running the above script will create a new stream in the Event Store for the new
 ## Denormalizer
 A denormalizer is used to creating read models from events stored in the event store in the CQRS+ES architecture. The denormalizer provided by this library makes this very easy, assuming your read model will be stored in a database supported by `transactional-db`.
 
-TODO: Add example
+Below is an example that maps the events from the shopping cart example above to a denormalized table in an RDBMS.
+
+```js
+const {Denormalizer, UserCredential, createStreamConnection} = require('event-store-stream');
+const transactional = require('transactional-db');
+const T = transactional.Transaction;
+//const {ConcurrentFree: F, Utility, Async} = require('monadic-js');
+
+//database manager with 10 connections to a MySQL server in its connection pool
+const dbm = transactional.create('mysql', 10, {
+	host: 'localhost',
+	user: 'root',
+	password: 'password',
+	database: 'test'
+});
+
+//connection to the event store
+const credentials = new UserCredentials("admin", "changeit");
+const es = createStreamConnection({}, "tcp://localhost:1113");
+es.credentials = credentials; //this will likely be made an explicit parameter to Denormalizer in the future
+es.connect();
+
+//note you can provide an optional IBus argument at the end
+//where IBus is something with a publish method that takes an event
+//name and event data
+const denormalizer = new Denormalizer(dbm, es, 10, 100);
+
+denormalizer.map('ShoppingCart.ShoppingCartCreated', ev => T.insert('shopping_cart', {
+	id: ev.domainObjectId,
+	name: ev.data.name,
+	items: JSON.stringify([]),
+}));
+
+denormalizer.map('ShoppingCart.ProductAdded', ev => do T {
+	cart <- T.read('shopping_cart', ev.domainObjectId)
+	do! cart.case({
+		Just: cart => do T {
+			items = JSON.parse(items)
+			items.push({
+				name: ev.data.name,
+				price: ev.data.price
+			})
+			
+			do! T.update('shopping_cart', {
+				id: ev.domainObjectId,
+				items
+			})
+		},
+		Nothing: T.of()
+	})
+});
+
+denormalizer.start();
+```
+
+In a real world use case, you might also combine events from different domain objects into a single read model. You could also provide an event bus that conforms to the `IBus` interface and emit events in your queries with `T.emit`. This would allow you to provide clients with an API on top of your read model that pushes updated data to them, by subscribing your API service to the event bus.
 
 ## Effector
 An effector is used to perform generic side effects in response to events that happen in a CQRS+ES architecture. The effector subscribes to live events and maps these to effects to execute, and executes them. Because only live events are subscribed to, you don't need to worry about the problem of repeating a side effect (sending the welcome email twice).
 
-TODO: Add example
+Right now I don't have an example for the Effector because I haven't written any DSLs to use with it yet. The interface is the same as Denormalizer though, other than the constructor.
 
 ## More info
 Read [documentation.md](documentation.md) for an API reference.
+
+Do not submit issues that are clearly part of `node-eventstore-client` here. Only submit issues related to the additional features provided by this package.
+
+## Planned features
+None right now, but I'm open to suggestions. Open an issue if you want something.
 
 ## Contributing
 Contributions are welcome. Currently just follow the standard fork-commit-push-pull request model. If this gets attention and people want to collaborate I will start an organization for this and we can start coming up with actual guidelines for style and contribution.
