@@ -1,4 +1,7 @@
 const defaults = require('transactional-db').Test;
+const Long = require('long');
+const client = require('node-eventstore-client');
+
 
 /* Mock subscription */
 class Subscription {
@@ -149,7 +152,11 @@ function makeEvent(type, data) {
 			eventType: type,
 			data: JSON.stringify(data),
 			isJson: true,
-		}
+		},
+		originalPosition: new client.Position(
+			new Long(0, 0),
+			new Long(0, 0)
+		)
 	};
 }
 

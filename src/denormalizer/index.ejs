@@ -68,8 +68,8 @@ class Denormalizer {
 		//Async () Error (Observable ())
 		return do Async {
 			//get position fields from database
-			[row] <- this.dbm.runTransaction(T.query(`
-				SELECT low_commit,high_commit,low_prepare,high_prepare from history`))
+			[row] <- this.dbm.runTransaction(T.query(
+				`SELECT low_commit,high_commit,low_prepare,high_prepare from history`))
 
 			{low_commit, high_commit, low_prepare, high_prepare} = row
 
@@ -106,7 +106,7 @@ class Denormalizer {
 	 *	processed in the order they are received.
 	 */
 	run(events$) {
-		events$.concatMap(events => {
+		return events$.concatMap(events => {
 			//computation to run
 			return this.dbm.runTransaction(do T {
 				//map events to their queries
@@ -133,7 +133,7 @@ class Denormalizer {
 					low_prepare,
 					high_prepare)
 			}, this.bus).toObservable();
-		});
+		}).share();
 	}
 }
 
