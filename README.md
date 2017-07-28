@@ -165,7 +165,8 @@ Below is an example that maps the events from the shopping cart example above to
 const {Denormalizer, UserCredential, createStreamConnection} = require('event-store-stream');
 const transactional = require('transactional-db');
 const T = transactional.Transaction;
-//const {ConcurrentFree: F, Utility, Async} = require('monadic-js');
+const {Utility} = require('monadic-js');
+const {exists} = Utility;
 
 //database manager with 10 connections to a MySQL server in its connection pool
 const dbm = transactional.create('mysql', 10, {
@@ -193,21 +194,14 @@ denormalizer.map('ShoppingCart.ShoppingCartCreated', ev => T.insert('shopping_ca
 }));
 
 denormalizer.map('ShoppingCart.ProductAdded', ev => do T {
-	cart <- T.read('shopping_cart', ev.domainObjectId)
-	do! cart.case({
-		Just: cart => do T {
-			items = JSON.parse(items)
-			items.push({
-				name: ev.data.name,
-				price: ev.data.price
-			})
-			
-			do! T.update('shopping_cart', {
-				id: ev.domainObjectId,
-				items
-			})
-		},
-		Nothing: _ => T.of()
+	cart <- exists(T.read('shopping_cart', ev.domainObjectId))
+	
+	items = JSON.parse(cart.items)
+	items.push({name: ev.data.name, price: ev.data.price})
+	
+	do! T.update('shopping_cart', {
+		id: ev.domainObjectId,
+		items: JSON.stringify(items)
 	})
 });
 
