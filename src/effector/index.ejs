@@ -1,5 +1,5 @@
 const {Utility, Async, ConcurrentFree: F} = require('monadic-js');
-const {seqAll} = Utility;
+const {seqAll, resume} = Utility;
 const esClient = require('node-eventstore-client');
 const {getInterestingEvents} = require('../util.js');
 
@@ -92,7 +92,7 @@ class Effector {
 
 				//map events to their "programs"
 				programs = events.map(event => 
-					this.mappers[event.eventType](event))
+					resume(this.mappers[event.eventType](event)))
 
 				//run programs from left-to-right sequentially:
 				//we need to do sequential execution to ensure that
@@ -102,7 +102,10 @@ class Effector {
 				do! seqAll(F, programs)
 
 				return undefined
-			}).toObservable()
+			}.catch(e => {
+				console.error(e);
+				return F.of();
+			})).toObservable()
 
 		}).share();
 	}

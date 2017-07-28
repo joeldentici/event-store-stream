@@ -1,6 +1,6 @@
 const {Transaction: T} = require('transactional-db');
 const {Utility, Async,} = require('monadic-js');
-const {seqAll} = Utility;
+const {seqAll, resume} = Utility;
 const esClient = require('node-eventstore-client');
 
 const Long = require('long');
@@ -111,7 +111,7 @@ class Denormalizer {
 			return this.dbm.runTransaction(do T {
 				//map events to their queries
 				queries = events.map(event => 
-					this.mappers[event.eventType](event))
+					resume(this.mappers[event.eventType](event)))
 
 				//perform queries from left-to-right, sequentially
 				do! seqAll(T, queries)
@@ -132,7 +132,10 @@ class Denormalizer {
 					high_commit,
 					low_prepare,
 					high_prepare)
-			}, this.bus).toObservable();
+			}.catch(e => {
+				console.error(e);
+				return T.of()
+			}), this.bus).toObservable();
 		}).share();
 	}
 }

@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/joeldentici/event-store-stream#readme",
   "dependencies": {
-    "monadic-js": "^1.0.4",
+    "monadic-js": "^1.1.0",
     "node-eventstore-client": "^0.1.3",
     "rx": "^4.1.0",
     "transactional-db": "^1.0.1"
