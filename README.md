@@ -144,7 +144,7 @@ const credentials = new UserCredentials("admin", "changeit");
 const es = createStreamConnection({}, "tcp://localhost:1113");
 es.connect();
 
-const interpret = F.createInterpreter(
+const interpret = F.interpret(
 	Async,
 	F.Control.interpreter,
 	StoreDSL.interpreter(es, credentials, 100)
