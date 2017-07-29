@@ -1,6 +1,6 @@
 {
   "name": "event-store-stream",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Tools to interact with Event Store (geteventstore.com)",
   "main": "src/index.js",
   "scripts": {
