@@ -222,7 +222,7 @@ class DomainObject {
 			return ev.chain(event => this.addEvent(event, true));
 		}
 		else {
-			return this.addEvent(event, true);
+			return this.addEvent(ev, true);
 		}
 	}
 }
