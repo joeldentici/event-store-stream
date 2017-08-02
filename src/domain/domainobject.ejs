@@ -22,6 +22,9 @@ const client = require('node-eventstore-client');
  *	3. Add an instance method `applyEvent` that accepts an event and returns a change map
  *	4. Add an instance method `snapshot` that returns a snapshot event
  *
+ *	Note: `doCreate` and `snapshot` can also return a monadic value that contains the
+ *	event.
+ *
  *	A change map is simply an object whose properties give the new values for the
  *	fields of your domain object. To unset a field, set the property value to undefined.
  *
@@ -59,12 +62,21 @@ class DomainObject {
 	 *
 	 *	Subclasses of DomainObject should provide a static
 	 *	<code>.doCreate</code> method that takes the arguments
-	 *	and returns an event signifying creation of the object.
+	 *	and returns an event signifying creation of the object (
+	 *	or a monadic value containing the event)
 	 */
 	static create(...args) {
 		const obj = new this(uuid.v4(), -1, {});
 
-		return obj.addEvent(this.doCreate(...args));
+		const ev = this.doCreate(...args);
+
+		if (typeof ev === 'object'
+			&& typeof ev.chain === 'function') {
+			return ev.chain(event => obj.addEvent(event));
+		}
+		else {
+			return obj.addEvent(ev);
+		}
 	}
 
 	/**
@@ -203,9 +215,15 @@ class DomainObject {
 	 *	Takes a snapshot of the current domain object state.
 	 */
 	_snapshot() {
-		const event = this.snapshot();
+		const ev = this.snapshot();
 
-		return this.addEvent(event, true);
+		if (typeof ev === 'object'
+			&& typeof ev.chain === 'function') {
+			return ev.chain(event => this.addEvent(event, true));
+		}
+		else {
+			return this.addEvent(event, true);
+		}
 	}
 }
 
