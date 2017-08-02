@@ -94,6 +94,9 @@ You need to do 4 things:
 3. Add an instance method `applyEvent` that accepts an event and returns a change map
 4. Add an instance method `snapshot` that returns a snapshot event
 
+Note: `doCreate` and `snapshot` can also return a monadic value that contains the
+event.
+
 A change map is simply an object whose properties give the new values for the
 fields of your domain object. To unset a field, set the property value to undefined.
 
@@ -130,7 +133,8 @@ Creates a new instance of the domain object.
 
 Subclasses of DomainObject should provide a static
 <code>.doCreate</code> method that takes the arguments
-and returns an event signifying creation of the object.
+and returns an event signifying creation of the object (
+or a monadic value containing the event)
 #### DomainEvent :: CaseClass
 
 A domain event is a case-analyzable object

@@ -4,7 +4,7 @@
   "description": "Tools to interact with Event Store (geteventstore.com)",
   "main": "src/index.js",
   "scripts": {
-    "document": "hmdoc 'Event Store Stream' src markdown > documentation.md",
+    "document": "hmdoc 'Event Store Stream' src markdown '.ejs' > documentation.md",
     "testit": "nodeunit test",
     "coveragelcov": "nyc --reporter=lcov npm run testit",
     "coverage": "nyc npm run testit",
